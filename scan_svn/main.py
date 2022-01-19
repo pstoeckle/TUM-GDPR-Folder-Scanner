@@ -7,7 +7,7 @@ from pathlib import Path
 from re import compile as re_compile
 from sys import stdout
 from typing import AbstractSet, MutableSet
-
+from tqdm import tqdm
 from tika import parser
 from typer import Option, Typer
 
@@ -61,7 +61,8 @@ def scan_directory(
     files_with_name: MutableSet[Path] = set()
     files_with_matriculation_no: MutableSet[Path] = set()
     files_with_tum_name: MutableSet[Path] = set()
-    for t in directory.glob("**/*.pdf"):
+    _LOGGER.info("Starting the PDF scan...")
+    for t in tqdm(list(directory.glob("**/*.pdf"))):
         text = parser.from_file(str(t))
         if text["content"] is None:
             _LOGGER.debug(f"Could not extract text from {t}")
@@ -73,8 +74,9 @@ def scan_directory(
             files_with_tum_name.add(t)
         if any(n in normalized_text for n in name_variations):
             files_with_name.add(t)
-
-    for t in chain(directory.glob("**/*.csv"), directory.glob("**/*.txt")):
+    _LOGGER.info("PDF scan: done!")
+    _LOGGER.info("Starting the CSV and TXT scan ...")
+    for t in tqdm(list(chain(directory.glob("**/*.csv"), directory.glob("**/*.txt")))):
         try:
             text = t.read_text()
         except UnicodeDecodeError:
@@ -91,6 +93,7 @@ def scan_directory(
             files_with_tum_name.add(t)
         if any(n in normalized_text for n in name_variations):
             files_with_name.add(t)
+    _LOGGER.info("CSV and TXT scan: Done!")
 
     _LOGGER.info("The following files contain the TUM Name")
     for f in files_with_tum_name:
