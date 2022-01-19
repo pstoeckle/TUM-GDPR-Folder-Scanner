@@ -83,7 +83,8 @@ def scan_directory(
     Scans all relevant files (CSV, TXT, PDF) for the given name, TUM name, and matriculation number.
     """
     name_variations = _create_name_variants(name_to_search)
-    matriculation_no_normalized = _normalize(matriculation_no)
+    # We strip the leading zeros because some CSV do not have them for the matriculation number.
+    matriculation_no_normalized = _normalize(matriculation_no).lstrip('0')
     tum_name_normalized = _normalize(tum_id)
 
     files_with_name: MutableSet[Path] = set()
