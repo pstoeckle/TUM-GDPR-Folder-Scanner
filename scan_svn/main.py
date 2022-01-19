@@ -6,10 +6,13 @@ from logging import INFO, basicConfig, getLogger
 from pathlib import Path
 from re import compile as re_compile
 from sys import stdout
-from typing import AbstractSet, MutableSet
+from typing import AbstractSet, MutableSet, Optional
+
 from tqdm import tqdm
+
+from scan_svn import __version__
 from tika import parser
-from typer import Option, Typer
+from typer import Exit, Option, Typer, echo
 
 basicConfig(
     format="%(levelname)s: %(asctime)s: %(name)s: %(message)s",
@@ -21,6 +24,17 @@ _LOGGER = getLogger(__name__)
 app = Typer()
 
 _WHITESPACE = re_compile(r"\s")
+
+
+def _version_callback(value: bool) -> None:
+    """
+
+    :param value:
+    :return:
+    """
+    if value:
+        echo(f"scan-svn {__version__}")
+        raise Exit()
 
 
 @app.command()
@@ -50,6 +64,13 @@ def scan_directory(
     tum_name: str = Option(
         None, "--tum-name", "-t", prompt=True, help="The TUM name, e.g., ga12acb."
     ),
+    _: Optional[bool] = Option(
+        None,
+        "--version",
+        "-v",
+        callback=_version_callback,
+        help="Shows the version and exits.",
+    ),
 ) -> None:
     """
     Scans all relevant files (CSV, TXT, PDF) for the given name, TUM name, and matriculation number.
@@ -61,7 +82,7 @@ def scan_directory(
     files_with_name: MutableSet[Path] = set()
     files_with_matriculation_no: MutableSet[Path] = set()
     files_with_tum_name: MutableSet[Path] = set()
-    _LOGGER.info("Starting the PDF scan...")
+    echo("Starting the PDF scan...")
     for t in tqdm(list(directory.glob("**/*.pdf"))):
         text = parser.from_file(str(t))
         if text["content"] is None:
@@ -74,8 +95,8 @@ def scan_directory(
             files_with_tum_name.add(t)
         if any(n in normalized_text for n in name_variations):
             files_with_name.add(t)
-    _LOGGER.info("PDF scan: done!")
-    _LOGGER.info("Starting the CSV and TXT scan ...")
+    echo("PDF scan: done!")
+    echo("Starting the CSV and TXT scan ...")
     for t in tqdm(list(chain(directory.glob("**/*.csv"), directory.glob("**/*.txt")))):
         try:
             text = t.read_text()
@@ -93,17 +114,17 @@ def scan_directory(
             files_with_tum_name.add(t)
         if any(n in normalized_text for n in name_variations):
             files_with_name.add(t)
-    _LOGGER.info("CSV and TXT scan: Done!")
+    echo("CSV and TXT scan: Done!")
 
-    _LOGGER.info("The following files contain the TUM Name")
+    echo("The following files contain the TUM Name")
     for f in files_with_tum_name:
-        _LOGGER.info(f)
-    _LOGGER.info("The following files contain the matriculation number")
+        echo(f)
+    echo("The following files contain the matriculation number")
     for f in files_with_matriculation_no:
-        _LOGGER.info(f)
-    _LOGGER.info("The following files contain the name in any order")
+        echo(f)
+    echo("The following files contain the name in any order")
     for f in files_with_name:
-        _LOGGER.info(f)
+        echo(f)
 
 
 def _normalize(s: str) -> str:
