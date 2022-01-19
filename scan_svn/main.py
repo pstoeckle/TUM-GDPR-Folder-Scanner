@@ -89,7 +89,7 @@ def scan_directory(
     ),
 ) -> None:
     """
-    Scans all relevant files (CSV, TXT, PDF) for the given name, TUM name, and matriculation number.
+    Scans all relevant files (CSV, PDF, TXT, XLSX, XML) for the given name, TUM name, and matriculation number.
     """
     name_variations = _create_name_variants(name_to_search)
     # We strip the leading zeros because some CSV do not have them for the matriculation number.
