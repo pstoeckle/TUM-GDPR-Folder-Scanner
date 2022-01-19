@@ -64,7 +64,13 @@ def scan_directory(
     tum_name: str = Option(
         None, "--tum-name", "-t", prompt=True, help="The TUM name, e.g., ga12acb."
     ),
-    _: Optional[bool] = Option(None, "--version", "-v", callback=_version_callback),
+    _: Optional[bool] = Option(
+        None,
+        "--version",
+        "-v",
+        callback=_version_callback,
+        help="Shows the version and exits.",
+    ),
 ) -> None:
     """
     Scans all relevant files (CSV, TXT, PDF) for the given name, TUM name, and matriculation number.
