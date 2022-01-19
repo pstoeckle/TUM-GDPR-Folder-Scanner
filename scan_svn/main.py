@@ -7,7 +7,9 @@ from pathlib import Path
 from re import compile as re_compile
 from sys import stdout
 from typing import AbstractSet, MutableSet, Optional
+from zipfile import BadZipFile
 
+from openpyxl import load_workbook
 from tqdm import tqdm
 
 from scan_svn import __version__
@@ -71,6 +73,13 @@ def scan_directory(
         is_flag=True,
         help="The PDF extraction takes some time. You can skip it for a first run.",
     ),
+    skip_xlsx: bool = Option(
+        False,
+        "--skip-xlsx",
+        "-X",
+        is_flag=True,
+        help="The XLSX extraction takes some time. You can skip it for a first run.",
+    ),
     _: Optional[bool] = Option(
         None,
         "--version",
@@ -84,7 +93,7 @@ def scan_directory(
     """
     name_variations = _create_name_variants(name_to_search)
     # We strip the leading zeros because some CSV do not have them for the matriculation number.
-    matriculation_no_normalized = _normalize(matriculation_no).lstrip('0')
+    matriculation_no_normalized = _normalize(matriculation_no).lstrip("0")
     tum_name_normalized = _normalize(tum_id)
 
     files_with_name: MutableSet[Path] = set()
@@ -98,15 +107,63 @@ def scan_directory(
                 _LOGGER.debug(f"Could not extract text from {t}")
                 continue
             normalized_text = _normalize(text["content"])
-            if matriculation_no_normalized in normalized_text:
-                files_with_matriculation_no.add(t)
-            if tum_name_normalized in normalized_text:
-                files_with_tum_name.add(t)
-            if any(n in normalized_text for n in name_variations):
-                files_with_name.add(t)
+            _add_filename_to_sets(
+                files_with_matriculation_no,
+                files_with_name,
+                files_with_tum_name,
+                matriculation_no_normalized,
+                name_variations,
+                normalized_text,
+                t,
+                tum_name_normalized,
+            )
         echo("PDF scan: done!")
     else:
         echo("Skipping the PDFs.")
+    if not skip_xlsx:
+        echo("Starting the XLSX scan ...")
+        for t in tqdm(list(directory.glob("**/*.xlsx"))):
+            if t.stem.startswith("~"):
+                _LOGGER.debug(f"{t} DO NOT COMMIT ~$ files!")
+                continue
+            try:
+                wb = load_workbook(str(t))
+            except BadZipFile:
+                _LOGGER.warning(f"Could not open {t}")
+                continue
+
+            for sheet in wb.worksheets:
+                for row in sheet.iter_rows(sheet.min_row, sheet.max_row):
+                    for i, cell in enumerate(row):
+                        value = _normalize(str(cell.value))
+                        _add_filename_to_sets(
+                            files_with_matriculation_no,
+                            files_with_name,
+                            files_with_tum_name,
+                            matriculation_no_normalized,
+                            name_variations,
+                            value,
+                            t,
+                            tum_name_normalized,
+                        )
+                        if i > 0:
+                            if any(
+                                n in _normalize(str(row[i - 1].value)) + value
+                                for n in name_variations
+                            ):
+                                files_with_name.add(t)
+                        try:
+                            next_cell = row[i + 1]
+                        except IndexError:
+                            continue
+                        if any(
+                            n in value + _normalize(str(next_cell.value))
+                            for n in name_variations
+                        ):
+                            files_with_name.add(t)
+        echo("XLSX scan: done!")
+    else:
+        echo("Skipping the XLSX.")
     echo("Starting the CSV and TXT scan ...")
     for t in tqdm(
         list(
@@ -122,10 +179,7 @@ def scan_directory(
         except UnicodeDecodeError:
             _LOGGER.debug(f"Encoding problem with {t}")
             encoding_found = False
-            for encoding in [
-                'iso-8859-1',
-                'cp1252'
-            ]:
+            for encoding in ["iso-8859-1", "cp1252"]:
                 try:
                     text = t.read_text(encoding=encoding)
                     encoding_found = True
@@ -142,17 +196,39 @@ def scan_directory(
             continue
         normalized_text = _normalize(text)
 
-        if matriculation_no_normalized in normalized_text:
-            files_with_matriculation_no.add(t)
-        if tum_name_normalized in normalized_text:
-            files_with_tum_name.add(t)
-        if any(n in normalized_text for n in name_variations):
-            files_with_name.add(t)
+        _add_filename_to_sets(
+            files_with_matriculation_no,
+            files_with_name,
+            files_with_tum_name,
+            matriculation_no_normalized,
+            name_variations,
+            normalized_text,
+            t,
+            tum_name_normalized,
+        )
     echo("CSV and TXT scan: Done!")
 
     _print_stuff(files_with_name, "name")
     _print_stuff(files_with_tum_name, "TUM ID")
     _print_stuff(files_with_matriculation_no, "matriculation number")
+
+
+def _add_filename_to_sets(
+    files_with_matriculation_no,
+    files_with_name,
+    files_with_tum_name,
+    matriculation_no_normalized,
+    name_variations,
+    normalized_text,
+    t,
+    tum_name_normalized,
+):
+    if matriculation_no_normalized in normalized_text:
+        files_with_matriculation_no.add(t)
+    if tum_name_normalized in normalized_text:
+        files_with_tum_name.add(t)
+    if any(n in normalized_text for n in name_variations):
+        files_with_name.add(t)
 
 
 def _print_stuff(files: AbstractSet[Path], label: str) -> None:
@@ -164,8 +240,8 @@ def _print_stuff(files: AbstractSet[Path], label: str) -> None:
     """
     if len(files) > 0:
         echo(f"The following files contain the {label} in any order")
-        for f in files:
-            echo(f)
+        for i, f in enumerate(sorted(files)):
+            echo(f"{i + 1}. {f}")
     else:
         echo(f"We haven't found the {label} in any file.")
 
