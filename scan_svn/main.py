@@ -107,12 +107,35 @@ def scan_directory(
     else:
         echo("Skipping the PDFs.")
     echo("Starting the CSV and TXT scan ...")
-    for t in tqdm(list(chain(directory.glob("**/*.csv"), directory.glob("**/*.txt")))):
+    for t in tqdm(
+        list(
+            chain(
+                directory.glob("**/*.csv"),
+                directory.glob("**/*.txt"),
+                directory.glob("**/*.xml"),
+            )
+        )
+    ):
         try:
             text = t.read_text()
         except UnicodeDecodeError:
             _LOGGER.debug(f"Encoding problem with {t}")
-            continue
+            encoding_found = False
+            for encoding in [
+                'iso-8859-1',
+                'cp1252'
+            ]:
+                try:
+                    text = t.read_text(encoding=encoding)
+                    encoding_found = True
+                    break
+                except UnicodeDecodeError:
+                    _LOGGER.debug(f"Also not working with {encoding}")
+            if encoding_found:
+                _LOGGER.debug(f"Encoding of {t}: {encoding}")
+            else:
+                _LOGGER.warning(f"Could not find encoding for {t}")
+                continue
         except FileNotFoundError:
             _LOGGER.debug(f"File {t} could not be opened.")
             continue
@@ -152,7 +175,7 @@ def _normalize(s: str) -> str:
     :param s:
     :return:
     """
-    return _WHITESPACE.sub("", s.casefold())
+    return _WHITESPACE.sub("", s.casefold().replace('"', "").replace("'", ""))
 
 
 def _create_name_variants(name: str) -> AbstractSet[str]:
@@ -163,6 +186,14 @@ def _create_name_variants(name: str) -> AbstractSet[str]:
             lastname + firstname,
             firstname + "," + lastname,
             lastname + "," + firstname,
+            firstname + ";" + lastname,
+            lastname + ";" + firstname,
+            _normalize(
+                f"<FAMILY_NAME_OF_STUDENT>{lastname}</FAMILY_NAME_OF_STUDENT><FIRST_NAME_OF_STUDENT>{firstname}</FIRST_NAME_OF_STUDENT>"
+            ),
+            _normalize(
+                f"<FIRST_NAME_OF_STUDENT>{firstname}</FIRST_NAME_OF_STUDENT><FAMILY_NAME_OF_STUDENT>{lastname}</FAMILY_NAME_OF_STUDENT>"
+            ),
         ]
     )
 
