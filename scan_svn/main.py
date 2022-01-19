@@ -61,8 +61,15 @@ def scan_directory(
         prompt=True,
         help="The matriculation number we are looking for.",
     ),
-    tum_name: str = Option(
-        None, "--tum-name", "-t", prompt=True, help="The TUM name, e.g., ga12acb."
+    tum_id: str = Option(
+        None, "--tum-id", "-t", prompt=True, help="The TUM ID, e.g., ga12acb."
+    ),
+    skip_pdfs: bool = Option(
+        False,
+        "--skip-pdfs",
+        "-S",
+        is_flag=True,
+        help="The PDF extraction takes some time. You can skip it for a first run.",
     ),
     _: Optional[bool] = Option(
         None,
@@ -77,25 +84,28 @@ def scan_directory(
     """
     name_variations = _create_name_variants(name_to_search)
     matriculation_no_normalized = _normalize(matriculation_no)
-    tum_name_normalized = _normalize(tum_name)
+    tum_name_normalized = _normalize(tum_id)
 
     files_with_name: MutableSet[Path] = set()
     files_with_matriculation_no: MutableSet[Path] = set()
     files_with_tum_name: MutableSet[Path] = set()
-    echo("Starting the PDF scan...")
-    for t in tqdm(list(directory.glob("**/*.pdf"))):
-        text = parser.from_file(str(t))
-        if text["content"] is None:
-            _LOGGER.debug(f"Could not extract text from {t}")
-            continue
-        normalized_text = _normalize(text["content"])
-        if matriculation_no_normalized in normalized_text:
-            files_with_matriculation_no.add(t)
-        if tum_name_normalized in normalized_text:
-            files_with_tum_name.add(t)
-        if any(n in normalized_text for n in name_variations):
-            files_with_name.add(t)
-    echo("PDF scan: done!")
+    if not skip_pdfs:
+        echo("Starting the PDF scan...")
+        for t in tqdm(list(directory.glob("**/*.pdf"))):
+            text = parser.from_file(str(t))
+            if text["content"] is None:
+                _LOGGER.debug(f"Could not extract text from {t}")
+                continue
+            normalized_text = _normalize(text["content"])
+            if matriculation_no_normalized in normalized_text:
+                files_with_matriculation_no.add(t)
+            if tum_name_normalized in normalized_text:
+                files_with_tum_name.add(t)
+            if any(n in normalized_text for n in name_variations):
+                files_with_name.add(t)
+        echo("PDF scan: done!")
+    else:
+        echo("Skipping the PDFs.")
     echo("Starting the CSV and TXT scan ...")
     for t in tqdm(list(chain(directory.glob("**/*.csv"), directory.glob("**/*.txt")))):
         try:
@@ -116,15 +126,24 @@ def scan_directory(
             files_with_name.add(t)
     echo("CSV and TXT scan: Done!")
 
-    echo("The following files contain the TUM Name")
-    for f in files_with_tum_name:
-        echo(f)
-    echo("The following files contain the matriculation number")
-    for f in files_with_matriculation_no:
-        echo(f)
-    echo("The following files contain the name in any order")
-    for f in files_with_name:
-        echo(f)
+    _print_stuff(files_with_name, "name")
+    _print_stuff(files_with_tum_name, "TUM ID")
+    _print_stuff(files_with_matriculation_no, "matriculation number")
+
+
+def _print_stuff(files: AbstractSet[Path], label: str) -> None:
+    """
+
+    :param files:
+    :param label:
+    :return:
+    """
+    if len(files) > 0:
+        echo(f"The following files contain the {label} in any order")
+        for f in files:
+            echo(f)
+    else:
+        echo(f"We haven't found the {label} in any file.")
 
 
 def _normalize(s: str) -> str:
