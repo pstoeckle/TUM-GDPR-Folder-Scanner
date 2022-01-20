@@ -28,7 +28,7 @@ class SVNScanner(object):
     name_variations: AbstractSet[str]
     matriculation_no_normalized: str
     tum_name_normalized: str
-    files_with_name: MutableSet[str]
+    files_with_name: MutableSet[Path]
     files_that_might_contain_the_name: MutableSet[Path]
     files_with_matriculation_no: MutableSet[Path]
     files_with_tum_name: MutableSet[Path]
@@ -147,7 +147,7 @@ class SVNScanner(object):
         _print_stuff(self.files_with_tum_name, "TUM ID")
         _print_stuff(self.files_with_matriculation_no, "matriculation number")
 
-    def _add_filename_to_sets(self, normalized_text: str, t: Path):
+    def _add_filename_to_sets(self, normalized_text: str, t: Path) -> None:
         if self.matriculation_no_normalized in normalized_text:
             self.files_with_matriculation_no.add(t)
         if self.tum_name_normalized in normalized_text:
