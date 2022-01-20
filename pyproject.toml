@@ -10,11 +10,11 @@ typer = "^0.4.0"
 tika = "^1.24"
 tqdm = "^4.62.3"
 openpyxl = "^3.0.9"
-types-setuptools = "^57.4.7"
 
 [tool.poetry.dev-dependencies]
 mypy = "^0.931"
 lxml = "^4.7.1"
+types-setuptools = "^57.4.7"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
