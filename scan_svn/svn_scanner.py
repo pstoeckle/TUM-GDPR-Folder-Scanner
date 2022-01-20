@@ -146,6 +146,14 @@ class SVNScanner(object):
         _print_stuff(self.files_with_name, "name")
         _print_stuff(self.files_with_tum_name, "TUM ID")
         _print_stuff(self.files_with_matriculation_no, "matriculation number")
+        if (
+            len(self.files_with_name) == 0
+            and len(self.files_with_tum_name) == 0
+            and len(self.files_with_matriculation_no) == 0
+        ):
+            _print_stuff(
+                self.files_that_might_contain_the_name, "firstname and lastname"
+            )
 
     def _add_filename_to_sets(self, normalized_text: str, t: Path) -> None:
         if self.matriculation_no_normalized in normalized_text:
@@ -154,6 +162,8 @@ class SVNScanner(object):
             self.files_with_tum_name.add(t)
         if any(n in normalized_text for n in self.name_variations):
             self.files_with_name.add(t)
+        elif self.firstname in normalized_text and self.lastname:
+            self.files_that_might_contain_the_name.add(t)
 
 
 def _print_stuff(files: AbstractSet[Path], label: str) -> None:
