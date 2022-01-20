@@ -16,6 +16,9 @@ from tika import parser
 
 _LOGGER = getLogger(__name__)
 _WHITESPACE = re_compile(r"\s")
+# If A is the firstname and B is the lastname, we check currently for AB, BA, A;B, B;A, etc.
+# Feel free to add more separators!
+_NAME_SEPARATORS: AbstractSet[str] = frozenset(["", ";", ",", "_", "-"])
 
 
 class SVNScanner(object):
@@ -23,26 +26,28 @@ class SVNScanner(object):
     Scanner class.
     """
 
-    firstname: str
-    lastname: str
-    name_variations: AbstractSet[str]
-    matriculation_no_normalized: str
-    tum_name_normalized: str
-    files_with_name: MutableSet[Path]
-    files_that_might_contain_the_name: MutableSet[Path]
-    files_with_matriculation_no: MutableSet[Path]
-    files_with_tum_name: MutableSet[Path]
+    _firstname: str
+    _lastname: str
+    _name_variations: AbstractSet[str]
+    _matriculation_no_normalized: str
+    _tum_name_normalized: str
+    _files_with_name: MutableSet[Path]
+    _files_that_might_contain_the_name: MutableSet[Path]
+    _files_with_matriculation_no: MutableSet[Path]
+    _files_with_tum_name: MutableSet[Path]
 
     def __init__(self, tum_id: str, name_to_search: str, matriculation_no: str) -> None:
-        self.firstname, self.lastname = name_to_search.casefold().split(" ", maxsplit=1)
-        self.name_variations = _create_name_variants(self.firstname, self.lastname)
+        self._firstname, self._lastname = name_to_search.casefold().split(
+            " ", maxsplit=1
+        )
+        self._name_variations = _create_name_variants(self._firstname, self._lastname)
         # We strip the leading zeros because some CSV do not have them for the matriculation number.
-        self.matriculation_no_normalized = _normalize(matriculation_no).lstrip("0")
-        self.tum_name_normalized = _normalize(tum_id)
-        self.files_with_name: MutableSet[Path] = set()
-        self.files_that_might_contain_the_name: MutableSet[Path] = set()
-        self.files_with_matriculation_no: MutableSet[Path] = set()
-        self.files_with_tum_name: MutableSet[Path] = set()
+        self._matriculation_no_normalized = _normalize(matriculation_no).lstrip("0")
+        self._tum_name_normalized = _normalize(tum_id)
+        self._files_with_name: MutableSet[Path] = set()
+        self._files_that_might_contain_the_name: MutableSet[Path] = set()
+        self._files_with_matriculation_no: MutableSet[Path] = set()
+        self._files_with_tum_name: MutableSet[Path] = set()
 
     def scan(self, directory: Path, skip_pdfs: bool, skip_xlsx: bool) -> None:
         """
@@ -90,18 +95,18 @@ class SVNScanner(object):
                             if i > 0:
                                 if any(
                                     n in _normalize(str(row[i - 1].value)) + value
-                                    for n in self.name_variations
+                                    for n in self._name_variations
                                 ):
-                                    self.files_with_name.add(t)
+                                    self._files_with_name.add(t)
                             try:
                                 next_cell = row[i + 1]
                             except IndexError:
                                 continue
                             if any(
                                 n in value + _normalize(str(next_cell.value))
-                                for n in self.name_variations
+                                for n in self._name_variations
                             ):
-                                self.files_with_name.add(t)
+                                self._files_with_name.add(t)
             echo("XLSX scan: done!")
         else:
             echo("Skipping the XLSX.")
@@ -143,27 +148,27 @@ class SVNScanner(object):
             )
         echo("CSV and TXT scan: Done!")
 
-        _print_stuff(self.files_with_name, "name")
-        _print_stuff(self.files_with_tum_name, "TUM ID")
-        _print_stuff(self.files_with_matriculation_no, "matriculation number")
+        _print_stuff(self._files_with_name, "name")
+        _print_stuff(self._files_with_tum_name, "TUM ID")
+        _print_stuff(self._files_with_matriculation_no, "matriculation number")
         if (
-            len(self.files_with_name) == 0
-            and len(self.files_with_tum_name) == 0
-            and len(self.files_with_matriculation_no) == 0
+            len(self._files_with_name) == 0
+            and len(self._files_with_tum_name) == 0
+            and len(self._files_with_matriculation_no) == 0
         ):
             _print_stuff(
-                self.files_that_might_contain_the_name, "firstname and lastname"
+                self._files_that_might_contain_the_name, "firstname and lastname"
             )
 
     def _add_filename_to_sets(self, normalized_text: str, t: Path) -> None:
-        if self.matriculation_no_normalized in normalized_text:
-            self.files_with_matriculation_no.add(t)
-        if self.tum_name_normalized in normalized_text:
-            self.files_with_tum_name.add(t)
-        if any(n in normalized_text for n in self.name_variations):
-            self.files_with_name.add(t)
-        elif self.firstname in normalized_text and self.lastname:
-            self.files_that_might_contain_the_name.add(t)
+        if self._matriculation_no_normalized in normalized_text:
+            self._files_with_matriculation_no.add(t)
+        if self._tum_name_normalized in normalized_text:
+            self._files_with_tum_name.add(t)
+        if any(n in normalized_text for n in self._name_variations):
+            self._files_with_name.add(t)
+        elif self._firstname in normalized_text and self._lastname:
+            self._files_that_might_contain_the_name.add(t)
 
 
 def _print_stuff(files: AbstractSet[Path], label: str) -> None:
@@ -196,7 +201,7 @@ def _create_name_variants(firstname: str, lastname: str) -> AbstractSet[str]:
             chain(
                 *[
                     [firstname + sep + lastname, lastname + sep + firstname]
-                    for sep in ["", ";", ",", "_", "-"]
+                    for sep in _NAME_SEPARATORS
                 ]
             )
         )
