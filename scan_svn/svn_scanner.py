@@ -2,10 +2,11 @@
 Logic for scanning.
 """
 from itertools import chain
+from json import dumps, loads
 from logging import getLogger
 from pathlib import Path
 from re import compile as re_compile
-from typing import AbstractSet, MutableSet
+from typing import AbstractSet, MutableMapping, MutableSet
 from zipfile import BadZipFile
 
 from click import echo
@@ -26,6 +27,7 @@ class SVNScanner(object):
     Scanner class.
     """
 
+    _CACHE_FILE_NAME: str = ".scan-svn.json"
     _firstname: str
     _lastname: str
     _name_variations: AbstractSet[str]
@@ -35,6 +37,7 @@ class SVNScanner(object):
     _files_that_might_contain_the_name: MutableSet[Path]
     _files_with_matriculation_no: MutableSet[Path]
     _files_with_tum_name: MutableSet[Path]
+    _cache: MutableMapping[str, str] = {}
 
     def __init__(self, tum_id: str, name_to_search: str, matriculation_no: str) -> None:
         self._firstname, self._lastname = name_to_search.casefold().split(
@@ -48,6 +51,7 @@ class SVNScanner(object):
         self._files_that_might_contain_the_name: MutableSet[Path] = set()
         self._files_with_matriculation_no: MutableSet[Path] = set()
         self._files_with_tum_name: MutableSet[Path] = set()
+        self._cache = {}
 
     def scan(self, directory: Path, skip_pdfs: bool, skip_xlsx: bool) -> None:
         """
@@ -58,25 +62,40 @@ class SVNScanner(object):
         :return:
         """
         if not skip_pdfs:
+            cache_file = directory.joinpath(self._CACHE_FILE_NAME)
+            if cache_file.is_file():
+                _LOGGER.info(f"Loading cache from {cache_file}")
+                self._cache = loads(cache_file.read_text())
             echo("Starting the PDF scan...")
             for t in tqdm(list(directory.glob("**/*.pdf"))):
-                text = parser.from_file(str(t))
-                if text["content"] is None:
-                    _LOGGER.debug(f"Could not extract text from {t}")
-                    continue
-                normalized_text = _normalize(text["content"])
+                if (normalized_text := self._cache.get(str(t))) is None:
+                    _LOGGER.debug(f"{t} was not in the cache..")
+                    text = parser.from_file(str(t))
+                    if text["content"] is None:
+                        _LOGGER.error(f"Could not extract text from {t}")
+                        self._cache[str(t)] = ""
+                        continue
+                    normalized_text = _normalize(text["content"])
+                    self._cache[str(t)] = normalized_text
+                else:
+                    _LOGGER.info(
+                        f"We found {t} in the cache. Skip PDF2Text for this file."
+                    )
                 self._add_filename_to_sets(
                     normalized_text,
                     t,
                 )
+
             echo("PDF scan: done!")
+
+            cache_file.write_text(dumps(self._cache))
         else:
             echo("Skipping the PDFs.")
         if not skip_xlsx:
             echo("Starting the XLSX scan ...")
             for t in tqdm(list(directory.glob("**/*.xlsx"))):
                 if t.stem.startswith("~"):
-                    _LOGGER.debug(f"{t} DO NOT COMMIT ~$ files!")
+                    _LOGGER.warning(f"{t} DO NOT COMMIT ~$ files!")
                     continue
                 try:
                     wb = load_workbook(str(t))
