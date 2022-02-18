@@ -1,8 +1,11 @@
 [tool.poetry]
 name = "scan-svn"
-version = "0.1.4"
+version = "0.1.5"
 description = ""
 authors = ["Patrick Stöckle <patrick.stoeckle@tum.de>"]
+maintainers = ["Patrick Stöckle <patrick.stoeckle@tum.de>"]
+readme = "README.md"
+repository = "git@gitlab.lrz.de:i4/software/scan-svn.git"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<4.0"
