@@ -167,7 +167,7 @@ class SVNScanner(object):
             self._files_with_tum_name.add(t)
         if any(n in normalized_text for n in self._name_variations):
             self._files_with_name.add(t)
-        elif self._firstname in normalized_text and self._lastname:
+        elif self._firstname in normalized_text and self._lastname in normalized_text:
             self._files_that_might_contain_the_name.add(t)
 
 
