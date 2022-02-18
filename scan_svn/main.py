@@ -3,19 +3,18 @@ Script to find students.
 """
 from logging import INFO, basicConfig, getLogger
 from pathlib import Path
-from sys import stdout
 from typing import Optional
 
 from scan_svn import __version__
-from typer import Exit, Option, Typer, echo
-
 from scan_svn.svn_scanner import SVNScanner
+from typer import Exit, Option, Typer, echo
 
 basicConfig(
     format="%(levelname)s: %(asctime)s: %(name)s: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
     level=INFO,
-    stream=stdout,
+    filename="scan-svn.log",
+    filemode="w",
 )
 _LOGGER = getLogger(__name__)
 app = Typer()
