@@ -1,0 +1,25 @@
+name: Build Python Package and Upload it to PyPI
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    container:
+      image: ghcr.io/pstoeckle/docker-images/python3.9-poetry1.2.1:0.1.4
+      options: --user 1001
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build Python package with Poetry
+      run: poetry build
+    - name: Publish Python package to PyPI
+      uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
+      with:
+        user: __token__
+        password: ${{ secrets.PYPI_API_TOKEN }}
