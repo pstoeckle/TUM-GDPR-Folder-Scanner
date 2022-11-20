@@ -1,27 +1,29 @@
 [tool.poetry]
-name = "scan-svn"
-version = "0.1.6"
-description = ""
-authors = ["Patrick Stöckle <patrick.stoeckle@tum.de>"]
-maintainers = ["Patrick Stöckle <patrick.stoeckle@tum.de>"]
+name = "TUM-GDPR-Folder-Scanner"
+version = "0.1.7"
+description = "Script to check local folders for GDPR-relevant information in the TUM context."
+authors = ["Patrick Stöckle <patrick.stoeckle@posteo.de>"]
+maintainers = ["Patrick Stöckle <patrick.stoeckle@posteo.de>"]
+license = "Apache-2.0"
 readme = "README.md"
 repository = "git@gitlab.lrz.de:i4/software/scan-svn.git"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<4.0"
-typer = "^0.4.0"
+python = ">=3.7,<4.0"
+typer = "^0.7.0"
 tika = "^1.24"
-tqdm = "^4.62.3"
-openpyxl = "^3.0.9"
+tqdm = "^4.64.1"
+openpyxl = "^3.0.10"
 
-[tool.poetry.dev-dependencies]
-mypy = "^0.931"
-lxml = "^4.7.1"
-types-setuptools = "^57.4.7"
+
+[tool.poetry.group.dev.dependencies]
+mypy = "^0.981"
+lxml = "^4.9.1"
+types-setuptools = "^65.3.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-scan-svn = 'scan_svn.main:app'
+tum-gdpr-folder-scanner = 'tum_gdpr_folder_scanner.main:app'
