@@ -22,7 +22,7 @@ _WHITESPACE = re_compile(r"\s")
 _NAME_SEPARATORS: AbstractSet[str] = frozenset(["", ";", ",", "_", "-"])
 
 
-class SVNScanner(object):
+class FolderScanner(object):
     """
     Scanner class.
     """

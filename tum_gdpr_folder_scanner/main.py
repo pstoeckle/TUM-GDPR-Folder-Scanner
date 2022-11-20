@@ -5,9 +5,9 @@ from logging import INFO, basicConfig, getLogger
 from pathlib import Path
 from typing import Optional
 
-from scan_svn import __version__
-from scan_svn.folder_scanner import SVNScanner
-from typer import Exit, Option, Typer, echo
+from tum_gdpr_folder_scanner import __version__
+from tum_gdpr_folder_scanner.folder_scanner import FolderScanner
+from typer import Exit, Option, Typer, echo, Argument
 
 basicConfig(
     format="%(levelname)s: %(asctime)s: %(name)s: %(message)s",
@@ -33,10 +33,8 @@ def _version_callback(value: bool) -> None:
 
 @app.command()
 def scan_directory(
-    directory: Path = Option(
+    directory: Path = Argument(
         ".",
-        "--directory",
-        "-s",
         help="The directory we want to analyze.",
         file_okay=False,
         resolve_path=True,
@@ -83,7 +81,7 @@ def scan_directory(
     """
     Scans all relevant files (CSV, PDF, TXT, XLSX, XML) for the given name, TUM name, and matriculation number.
     """
-    scanner = SVNScanner(tum_id, name_to_search, matriculation_no)
+    scanner = FolderScanner(tum_id, name_to_search, matriculation_no)
     scanner.scan(directory, skip_pdfs, skip_xlsx)
 
 
