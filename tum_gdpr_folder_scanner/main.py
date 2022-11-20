@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 from scan_svn import __version__
-from scan_svn.svn_scanner import SVNScanner
+from scan_svn.folder_scanner import SVNScanner
 from typer import Exit, Option, Typer, echo
 
 basicConfig(
