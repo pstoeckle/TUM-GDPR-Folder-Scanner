@@ -6,7 +6,7 @@ authors = ["Patrick Stöckle <patrick.stoeckle@posteo.de>"]
 maintainers = ["Patrick Stöckle <patrick.stoeckle@posteo.de>"]
 license = "Apache-2.0"
 readme = "README.md"
-repository = "git@gitlab.lrz.de:i4/software/scan-svn.git"
+repository = "https://github.com/pstoeckle/TUM-GDPR-Folder-Scanner.git"
 
 [tool.poetry.dependencies]
 python = ">=3.7,<4.0"
