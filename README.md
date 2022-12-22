@@ -3,8 +3,13 @@
 Students at the [Technical University of Munich (TUM)](https://www.tum.de/en/) have the right to request to information on personal data after Art. 17 GDPR.
 I wrote this script to check local folders for such information.
 
-## Usage
+## Installation
 
+```shell
+pip install tum-gdpr-folder-scanner
+```
+
+## Usage
 
 ```shell
 $ tum-gdpr-folder-scanner --help
