@@ -1,0 +1,32 @@
+name: Python tests
+
+on:
+  push:
+    paths:
+      - ".github/workflows/python-test.yml"
+      - "pyproject.toml"
+      - "tum_gdpr_folder_scanner/**/*.py"
+
+permissions:
+  contents: read
+
+jobs:
+  mypy:
+    container:
+      image: tumi4/python-3.9-bullseye-poetry-1.2.1
+      options: --user 1001
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install dependencies
+        run: |
+          poetry install
+      - name: Test typing with mypy
+        run: |
+          poetry run mypy --cobertura-xml-report=. --junit-xml=mypy.xml --pretty tum_gdpr_folder_scanner
+      - name: Archive typing coverage results
+        uses: actions/upload-artifact@v3
+        with:
+          name: typing-coverage-report
+          path: cobertura.xml
+        if: ${{ always() }}
